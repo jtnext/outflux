@@ -2,13 +2,14 @@ import getpass
 import logging
 import os
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from datetime import datetime
-from typing import Iterable, Optional
+from typing import Optional
 from uuid import UUID
 
 from requests.exceptions import HTTPError
 from requests.sessions import Session
+from urllib3.exceptions import NameResolutionError
 
 from outflux.outflux import ConfigError, Outflux
 
@@ -18,18 +19,47 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO)
 
     try:
-        try_main(sys.argv)
+        try_main()
     except ConfigError as err:
         print(err)
         status = os.EX_CONFIG
-    except HTTPError as err:
+    except (NameResolutionError, HTTPError) as err:
         print(err)
         status = os.EX_IOERR
+    except KeyboardInterrupt:
+        print("Aborting")
+        status = os.EX_OSERR
 
     sys.exit(status)
 
 
-def try_main(argv: list[str]) -> None:
+def try_main() -> None:
+    args = parse_args(sys.argv)
+
+    if (username := os.getenv("OUTFLUX_USERNAME", args.username)) is None:
+        raise ConfigError("Environment variable OUTFLUX_USERNAME not set")
+
+    password_getpass: Optional[str] = None
+    if args.password:
+        password_getpass = getpass.getpass(f"Password for user {username} on {args.influx_url}: ")
+
+    if (password := os.getenv("OUTFLUX_PASSWORD", password_getpass)) is None:
+        raise ConfigError("Environment variable OUTFLUX_PASSWORD not set")
+
+    outflux = Outflux(args.influx_url, args.db, args.measurement, args.start, args.end)
+    print(f"URL: {outflux.url}")
+    print(f"DB: {outflux.db}")
+    print(f"Measurement: {outflux.measurement}")
+
+    with Session() as session:
+        session.auth = (username, password)
+        for uuid in args.timeseries:
+            process_timeseries(outflux, session, uuid)
+
+    print("Done.")
+
+
+def parse_args(argv: list[str]) -> Namespace:
     parser = ArgumentParser()
     parser.add_argument(
         "-i",
@@ -61,44 +91,23 @@ def try_main(argv: list[str]) -> None:
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
     parser.add_argument("timeseries", type=UUID, nargs="+", help="Timeseries UUIDs to delete")
 
-    args = parser.parse_args(argv[1:])
-
-    if (username := os.getenv("OUTFLUX_USERNAME", args.username)) is None:
-        raise ConfigError("Environment variable OUTFLUX_USERNAME not set")
-
-    password_getpass: Optional[str] = None
-    if args.password:
-        password_getpass = getpass.getpass(f"Password for user {username} on {args.influx_url}: ")
-
-    if (password := os.getenv("OUTFLUX_PASSWORD", password_getpass)) is None:
-        raise ConfigError("Environment variable OUTFLUX_PASSWORD not set")
-
-    outflux = Outflux(args.influx_url, args.db, args.measurement, args.start, args.end)
-    with Session() as session:
-        session.auth = (username, password)
-        run(outflux, session, args.timeseries)
+    return parser.parse_args(argv[1:])
 
 
-def run(outflux: Outflux, session: Session, timeseries: Iterable[UUID]) -> None:
-    print(f"URL: {outflux.url}")
-    print(f"DB: {outflux.db}")
-    print(f"Measurement: {outflux.measurement}")
+def process_timeseries(outflux: Outflux, session: Session, uuid: UUID) -> None:
+    query_select = outflux.query_select(uuid)
+    print(f"\nSelect query: {query_select}")
 
-    for uuid in timeseries:
-        query_select = outflux.query_select(uuid)
-        print(f"\nSelect query: {query_select}")
+    result_select = outflux.execute(session, query_select)
+    print(result_select)
 
-        result_select = outflux.execute(session, query_select)
-        print(result_select)
+    confirm = input("Delete data? [y/N] ")
+    if confirm.lower() not in ["y", "yes"]:
+        return
 
-        confirm = input("Delete data? [y/N] ")
-        if confirm.lower() not in ["y", "yes"]:
-            continue
+    query_delete = outflux.query_delete(uuid)
+    print(f"Delete query: {query_delete}")
 
-        query_delete = outflux.query_delete(uuid)
-        print(f"Delete query: {query_delete}")
+    result_delete = outflux.execute(session, query_delete)
+    print(result_delete)
 
-        result_delete = outflux.execute(session, query_delete)
-        print(result_delete)
-
-    print("Done.")
