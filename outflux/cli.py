@@ -4,7 +4,7 @@ import os
 import sys
 from argparse import ArgumentParser
 from datetime import datetime
-from typing import Optional
+from typing import Iterable, Optional
 from uuid import UUID
 
 from requests.exceptions import HTTPError
@@ -31,6 +31,13 @@ def main() -> int:
 
 def try_main(argv: list[str]) -> None:
     parser = ArgumentParser()
+    parser.add_argument(
+        "-i",
+        "--influx-url",
+        type=str,
+        default="http://influxdb1.domain.next-kraftwerke.de:8086/query",
+        help="InfluxDB query URL",
+    )
     parser.add_argument("-d", "--db", type=str, required=True, help="InfluxDB DB name")
     parser.add_argument("-m", "--measurement", type=str, required=True, help="InfluxDB measurement name")
     parser.add_argument(
@@ -52,13 +59,6 @@ def try_main(argv: list[str]) -> None:
         "-p", "--password", action="store_true", help="Prompt for InfluxDB password"
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
-    parser.add_argument(
-        "-i",
-        "--influx-url",
-        type=str,
-        default="http://influxdb1.domain.next-kraftwerke.de:8086/query",
-        help="InfluxDB query URL",
-    )
     parser.add_argument("timeseries", type=UUID, nargs="+", help="Timeseries UUIDs to delete")
 
     args = parser.parse_args(argv[1:])
@@ -73,29 +73,32 @@ def try_main(argv: list[str]) -> None:
     if (password := os.getenv("OUTFLUX_PASSWORD", password_getpass)) is None:
         raise ConfigError("Environment variable OUTFLUX_PASSWORD not set")
 
-    print(f"URL: {args.influx_url}")
-    print(f"DB: {args.db}")
-    print(f"Measurement: {args.measurement}")
-
     outflux = Outflux(args.influx_url, args.db, args.measurement, args.start, args.end)
     with Session() as session:
         session.auth = (username, password)
+        run(outflux, session, args.timeseries)
 
-        for uuid in args.timeseries:
-            query_select = outflux.query_select(uuid)
-            print(f"Query: {query_select}")
 
-            result_select = outflux.execute(session, query_select)
-            print(result_select)
+def run(outflux: Outflux, session: Session, timeseries: Iterable[UUID]) -> None:
+    print(f"URL: {outflux.url}")
+    print(f"DB: {outflux.db}")
+    print(f"Measurement: {outflux.measurement}")
 
-            confirm = input("Delete data? [y/N] ")
-            if confirm.lower() not in ["y", "yes"]:
-                continue
+    for uuid in timeseries:
+        query_select = outflux.query_select(uuid)
+        print(f"\nSelect query: {query_select}")
 
-            query_delete = outflux.query_delete(uuid)
-            print(f"Query: {query_delete}")
+        result_select = outflux.execute(session, query_select)
+        print(result_select)
 
-            result_delete = outflux.execute(session, query_delete)
-            print(result_delete)
+        confirm = input("Delete data? [y/N] ")
+        if confirm.lower() not in ["y", "yes"]:
+            continue
+
+        query_delete = outflux.query_delete(uuid)
+        print(f"Delete query: {query_delete}")
+
+        result_delete = outflux.execute(session, query_delete)
+        print(result_delete)
 
     print("Done.")
