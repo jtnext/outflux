@@ -109,16 +109,30 @@ def try_main(argv: list[str]) -> None:
     if (password := os.getenv("OUTFLUX_PASSWORD", password_getpass)) is None:
         raise ConfigError("Environment variable OUTFLUX_PASSWORD not set")
 
+    print(f"URL: {args.influx_url}")
+    print(f"DB: {args.db}")
+    print(f"Measurement: {args.measurement}")
+
     outflux = Outflux(args.influx_url, args.db, args.measurement, args.start, args.end)
     with Session() as session:
         session.auth = (username, password)
 
         for uuid in args.timeseries:
-            query = outflux.query_select(uuid)
-            print(query)
+            query_select = outflux.query_select(uuid)
+            print(f"Query: {query_select}")
 
-            res = outflux.execute(session, query)
-            print(res)
+            result_select = outflux.execute(session, query_select)
+            print(result_select)
+
+            confirm = input("Delete data? [y/N] ")
+            if confirm.lower() not in {"y", "yes"}:
+                continue
+
+            query_delete = outflux.query_delete(uuid)
+            print(f"Query: {query_delete}")
+
+            result_delete = outflux.execute(session, query_delete)
+            print(result_delete)
 
     print("Done.")
 
