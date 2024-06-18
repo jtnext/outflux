@@ -11,7 +11,8 @@ So for the time being, you can install it directly from git.
 I'd recommend [pipx](https://pipx.pypa.io/stable/) instead of raw `pip` for that purpose.
 
 ```sh
-pipx install git+ssh://git@github.com/jtnext/outflux.git --pip-args "-c https://raw.githubusercontent.com/jtnext/outflux/main/requirements.txt"
+pipx install git+ssh://git@github.com/jtnext/outflux.git \
+    --pip-args "-c https://raw.githubusercontent.com/jtnext/outflux/main/requirements.txt"
 ```
 
 ## Usage
