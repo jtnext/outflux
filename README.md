@@ -11,14 +11,38 @@ So for the time being, you can install it directly from git.
 I'd recommend [pipx](https://pipx.pypa.io/stable/) instead of raw `pip` for that purpose.
 
 ```sh
-pipx install git+ssh://git@github.com/jtnext/outflux.git
+pipx install git+ssh://git@github.com/jtnext/outflux.git --pip-args "-c https://raw.githubusercontent.com/jtnext/outflux/main/requirements.txt"
 ```
 
 ## Usage
 
-See `outflux --help`.
+See `outflux --help`:
+
+```
+usage: outflux [-h] -d DB -m MEASUREMENT -s START -e END [-u USERNAME] [-p] [-v] [-i INFLUX_URL] timeseries [timeseries ...]
+
+positional arguments:
+  timeseries            Timeseries UUIDs to delete
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DB, --db DB        InfluxDB DB name
+  -m MEASUREMENT, --measurement MEASUREMENT
+                        InfluxDB measurement name
+  -s START, --start START
+                        Start date of time range to delete in ISO format
+  -e END, --end END     End date of time range to delete in ISO format
+  -u USERNAME, --username USERNAME
+                        InfluxDB username
+  -p, --password        Prompt for InfluxDB password
+  -v, --verbose         Increase output verbosity
+  -i INFLUX_URL, --influx-url INFLUX_URL
+                        InfluxDB query URL
+```
 
 Credentials for InfluxDB can be set via `OUTFLUX_USERNAME` and `OUTFLUX_PASSWORD` environment variables alternatively.
+
+The `--verbose` flag has no effect yet.
 
 ## Development
 
