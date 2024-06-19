@@ -8,9 +8,6 @@ from requests.sessions import Session
 ZONE_INFO = ZoneInfo("Europe/Berlin")
 
 
-class ConfigError(Exception): ...
-
-
 class Params(TypedDict):
     db: str
     q: str

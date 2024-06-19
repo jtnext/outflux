@@ -11,7 +11,10 @@ from requests.exceptions import HTTPError
 from requests.sessions import Session
 from urllib3.exceptions import NameResolutionError
 
-from outflux.outflux import ConfigError, Outflux
+from outflux.outflux import Outflux
+
+
+class ConfigError(Exception): ...
 
 
 def main() -> int:
