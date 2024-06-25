@@ -1,3 +1,4 @@
-.envrc
 **/*.egg-info
 **/__pycache__
+.envrc
+.hypothesis
