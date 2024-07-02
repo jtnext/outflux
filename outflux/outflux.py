@@ -18,8 +18,8 @@ class Outflux:
         self.url = url
         self.db = db
         self.measurement = measurement
-        self.start_ts = self._timestamp_ns(start)
-        self.end_ts = self._timestamp_ns(end)
+        self.start = self._localized_isoformat(start)
+        self.end = self._localized_isoformat(end)
 
     def execute(self, session: Session, query: str) -> Any:
         params = self._params(query)
@@ -30,15 +30,14 @@ class Outflux:
         return response.json()
 
     def query_select(self, uuid: UUID) -> str:
-        return f"select * from {self.measurement} where time>={self.start_ts} and time<{self.end_ts} and uuid='{uuid}'"
+        return f"select * from {self.measurement} where time>='{self.start}' and time<'{self.end}' and uuid='{uuid}'"
 
     def query_delete(self, uuid: UUID) -> str:
-        return f"delete from {self.measurement} where time>={self.start_ts} and time<{self.end_ts} and uuid='{uuid}'"
+        return f"delete from {self.measurement} where time>={self.start} and time<{self.end} and uuid='{uuid}'"
 
     def _params(self, query: str) -> Params:
         return {"db": self.db, "q": query}
 
     @staticmethod
-    def _timestamp_ns(dt: datetime, zone_info: ZoneInfo = ZONE_INFO) -> int:
-        ns_factor = 1_000_000_000
-        return int(dt.astimezone(zone_info).timestamp() * ns_factor)
+    def _localized_isoformat(dt: datetime, zone_info: ZoneInfo = ZONE_INFO) -> str:
+        return dt.astimezone(zone_info).isoformat()
