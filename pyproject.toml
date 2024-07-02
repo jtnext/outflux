@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "outflux"
 version = "0.1.0"
@@ -12,21 +16,18 @@ dev = [
   "mypy",
   "pytest",
   "ruff",
+  "types-requests",
 ]
 
 [project.scripts]
 outflux = "outflux.cli:main"
-
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
-
-[tool.ruff]
-line-length = 100
-target-version = "py39"
 
 [tool.mypy]
 install_types = true
 non_interactive = true
 python_version = "3.9"
 strict = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
