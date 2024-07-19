@@ -33,7 +33,7 @@ class Outflux:
         return f"select * from {self.measurement} where time>='{self.start}' and time<'{self.end}' and uuid='{uuid}'"
 
     def query_delete(self, uuid: UUID) -> str:
-        return f"delete from {self.measurement} where time>={self.start} and time<{self.end} and uuid='{uuid}'"
+        return f"delete from {self.measurement} where time>='{self.start}' and time<'{self.end}' and uuid='{uuid}'"
 
     def _params(self, query: str) -> Params:
         return {"db": self.db, "q": query}
