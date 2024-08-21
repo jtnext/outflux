@@ -36,7 +36,11 @@ tomli==2.0.1
     # via
     #   mypy
     #   pytest
+types-requests==2.32.0.20240712
+    # via outflux (pyproject.toml)
 typing-extensions==4.12.2
     # via mypy
 urllib3==2.2.2
-    # via requests
+    # via
+    #   requests
+    #   types-requests
