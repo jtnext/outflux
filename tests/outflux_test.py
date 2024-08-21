@@ -1,4 +1,5 @@
 from datetime import datetime
+from unittest.mock import MagicMock
 from uuid import UUID
 
 from hypothesis import given, strategies as st
@@ -17,6 +18,27 @@ def test_init(db: str, measurement: str, start: datetime, end: datetime) -> None
 
     assert datetime.fromisoformat(outflux.start) == start.astimezone(ZONE_INFO)
     assert datetime.fromisoformat(outflux.end) == end.astimezone(ZONE_INFO)
+
+
+@given(uuid=st.uuids(), start=st.datetimes(), end=st.datetimes())
+def test_execute(uuid: UUID, start: datetime, end: datetime) -> None:
+    url = "http://influxdb-unittest:8086"
+    db = "testdb"
+    measurement = "unittests"
+    outflux = Outflux(url, db, measurement, start, end)
+
+    session = MagicMock()
+    response = MagicMock()
+    session.post.return_value = response
+
+    query = outflux.query_select(uuid)
+    outflux.execute(session, query)
+
+    assert session.post.called
+    args, kwargs = session.post.call_args
+    assert args[0] == url
+    assert kwargs["params"]["db"] == db
+    assert kwargs["params"]["q"] == query
 
 
 @given(uuid=st.uuids(), start=st.datetimes(), end=st.datetimes())
